@@ -8,6 +8,7 @@ using System;
 using TMPro;
 using Newtonsoft.Json;
 using UnityEngine.EventSystems;
+using M2MqttUnity.Examples;
 
 public class ToggleTest : MonoBehaviour,IPointerDownHandler
 {
@@ -17,13 +18,14 @@ public class ToggleTest : MonoBehaviour,IPointerDownHandler
     private String intensitystr;
     private bool intensity;
     public String SubscribeMessage = "temp_hum/kunming";
-    public String MYSubscribeTopic = "esp8266/led";
-    private MqttClient mqttClient;
+    public String MYSubscribeTopic = "temp_hum/kunming111";
     private string json;
     private Toggle m_Toggle;//��ȡ��Toggle���?
     private GameObject lightComp;//��ȡ��Toggle���?
     private MeshRenderer cube;
     private TextMeshPro textcube;
+    private M2MqttUnityTest mqttClient;
+    private GameObject gameObject;
     // Start is called before the first frame update
     private void Awake()
     {
@@ -45,143 +47,73 @@ public class ToggleTest : MonoBehaviour,IPointerDownHandler
         textcube = transform.GetComponentInChildren<TextMeshPro>();
         textcube.color = new Color(255,0,0);
         lightComp = GameObject.Find("tableLamp");//获取灯光
-        //��̬���Ӽ���
-        //m_Toggle.onValueChanged.AddListener(ToggleOnValueChanged);
-        //m_Toggle.isOn = false;
-        mqttClient = new MqttClient(new MqttConnectionOptions()
+                                                 //��̬���Ӽ���
+                                                 //m_Toggle.onValueChanged.AddListener(ToggleOnValueChanged);
+                                                 //m_Toggle.isOn = false;
+
+         gameObject = GameObject.Find("tableLamp");
+        // 获取 MQTT 客户端的引用，假设它已经在场景中初始化了
+        mqttClient = FindObjectOfType<M2MqttUnityTest>();
+        if (mqttClient != null)
         {
-            ClientId = "mqttx_1ef8dc67",                     // �ͻ��˵�Ψһ��ID��Ϣ
-            IpAddress = "broker.emqx.io",              // �������ĵ�ַ
-        });
-        // ���ӷ�����
-        HslCommunication.OperateResult connect = mqttClient.ConnectServer();
-        if (connect.IsSuccess)
-        {
-            // ���ӳɹ�
-            //UnityEngine.Debug.Log("���ӳɹ�");
+            // 订阅事件
+            mqttClient.OnMessageReceived += HandleMessageReceived;
         }
-        else
-        {
-            // ����ʧ�ܣ���������?����������
-            //UnityEngine.Debug.Log("����ʧ��");
-        }
-        HslCommunication.OperateResult sub = mqttClient.SubscribeMessage(SubscribeMessage);
-        // ����ʾ��
-        mqttClient.OnMqttMessageReceived += (MqttClient client, string topic, byte[] payload) =>
-        {
-            //UnityEngine.Debug.Log("Time:----" + DateTime.Now.ToString());
-            //Console.WriteLine("Topic:" + topic);
-            json = Encoding.UTF8.GetString(payload);
-            MyJsonClass myJson = JsonConvert.DeserializeObject<MyJsonClass>(json);
-            //UnityEngine.Debug.Log("json-----:" + json);
-            //UnityEngine.Debug.Log("Time:" + DateTime.Now.ToString());
-            //UnityEngine.Debug.Log("Topic:" + topic);
-            //UnityEngine.Debug.Log("Payload:" + Encoding.UTF8.GetString(payload));
-            
-            //��̬���Ӽ���
-            char[] c = json.ToCharArray();
-            intensitystr = json;
-            //print(myJson.hum);
-            if (myJson.hum == 0)
-            {
-                intensity = false;
-            }
-            else {
-                intensity = true;
-            }
-            print(intensity);
-            print(intensity == true);
-            print(intensity == false);
-        };
 
     }
 
+    private void HandleMessageReceived(string topic, string message)
+    {
+        Light l = gameObject.GetComponent<Light>();
+        if (gameObject.GetComponent<Light>() == null) {
+            l = gameObject.AddComponent<Light>();
+            l.color = Color.blue;
+        }
+        // 在这里处理接收到的消息
+        Debug.Log("在这里处理接收到的消息Message received on topic: " + topic + " with content: " + message);
+        MyJsonClass myObject = JsonConvert.DeserializeObject<MyJsonClass>(message);
+        if (myObject.hum == 1)
+        {
+            l.enabled = true;
+        }
+        else {
+            l.enabled = false;
+        }
+    }
+    void OnDestroy()
+    {
+        if (mqttClient != null)
+        {
+            // 取消订阅事件，防止内存泄漏
+            mqttClient.OnMessageReceived -= HandleMessageReceived;
+        }
+    }
+
+    // 添加一个公共方法来供外部调用
+    public void ExternalToggleOnValueChanged(bool isOn)
+    {
+        ToggleOnValueChanged(isOn);
+    }
     // Update is called once per frame
     void Update()
     {
-        Light l = lightComp.GetComponent<Light>();
-        textcube.text = intensitystr;
-        if (intensity == true)
-        {
-            if (l != null) {
-                //print("开");
-                //print(lightComp.intensity);
-                cube.material.color = new Color(255, 0, 0);
-                l.enabled = true;
-                //print(lightComp.intensity);
-            }
-
-        }
-        else {
-            if (l != null)
-            {
-                //print("关");
-                cube.material.color = new Color(0, 0, 0);
-                l.enabled = false;
-            }
-            
-            //print(lightComp.intensity);
-        }
-        //lightComp.intensity = 0;
+       
     }
     //�����¼�
     private void ToggleOnValueChanged(bool isOn)
     {
+      
         if (isOn)
         {
-            HslCommunication.OperateResult connect = mqttClient.PublishMessage(new MqttApplicationMessage()
-            {
-                Topic = MYSubscribeTopic,                 //����
-                QualityOfServiceLevel = MqttQualityOfServiceLevel.AtMostOnce,       //�����ʵʱ���ݣ��ʺ������
-                Payload = Encoding.UTF8.GetBytes("1")
-            });
-            //UnityEngine.Debug.Log("Topic:" + connect);
-            if (connect.IsSuccess)
-            {
-                //�����ɹ�
-                //UnityEngine.Debug.Log("�����ɹ�");
-            }
-            else
-            {
-                //UnityEngine.Debug.Log("����ʧ��");
-            }
-            //Debug.Log("��");
+
         }
         else
         {
-            HslCommunication.OperateResult connect = mqttClient.PublishMessage(new MqttApplicationMessage()
-            {
-                Topic = MYSubscribeTopic,                 //����
-                QualityOfServiceLevel = MqttQualityOfServiceLevel.AtMostOnce,       //�����ʵʱ���ݣ��ʺ������
-                Payload = Encoding.UTF8.GetBytes("0")
-            });
-            //UnityEngine.Debug.Log("Topic:" + connect);
-            if (connect.IsSuccess)
-            {
-                //�����ɹ�
-                //UnityEngine.Debug.Log("�����ɹ�");
-            }
-            else
-            {
-                //UnityEngine.Debug.Log("����ʧ��");
-            }
-            //Debug.Log("��");
         }
     }
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        MyJsonClass myJson = JsonConvert.DeserializeObject<MyJsonClass>(intensitystr);
-
-        if (myJson.hum == 0)
-        {
-            //lightComp.intensity = 0;
-            intensity = false;
-            ToggleOnValueChanged(true);
-        }
-        else
-        {
-            ToggleOnValueChanged(false);
-        }
+        
     }
 }

@@ -52,18 +52,18 @@ public class tableLamp_led : MonoBehaviour
             
 
         }
-        if (Input.GetKeyDown(KeyCode.G))
-        {
-            print("按下键盘的'G'键来切换灯光");
-            if (game != null)
-            {
-                Light lightComp =  game.AddComponent<Light>();
-                // Set color and position
-                lightComp.color = Color.blue;
-            }
+        //if (Input.GetKeyDown(KeyCode.G))
+        //{
+        //    print("按下键盘的'G'键来切换灯光");
+        //    if (game != null)
+        //    {
+        //        Light lightComp =  game.AddComponent<Light>();
+        //        // Set color and position
+        //        lightComp.color = Color.blue;
+        //    }
 
 
-        }
+        //}
     }
     // 调用这个方法来关闭灯光
     public void TurnOffLight()
